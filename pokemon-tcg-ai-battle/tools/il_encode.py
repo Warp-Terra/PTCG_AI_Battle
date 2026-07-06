@@ -21,7 +21,7 @@ Per decision (acting player = current.yourIndex):
 
 Build dataset: python tools/il_encode.py <zip> out.npz
 """
-import sys, os, json, zipfile, argparse
+import sys, os, json, zipfile, argparse, csv
 import numpy as np
 
 DRAGAPULT_EX = 121
@@ -32,6 +32,22 @@ N_OPTION_SCALARS = 2
 
 # AreaType (from cg/api.py)
 HAND, DISCARD, ACTIVE, BENCH, PRIZE, DECK = 2, 3, 4, 5, 6, 1
+
+
+def load_leaderboard(csv_path, min_elo=0):
+    """Return dict: normalized team_name -> elo_score (for names with Elo >= min_elo)."""
+    lb = {}
+    with open(csv_path, newline="", encoding="utf-8") as f:
+        for row in csv.DictReader(f):
+            name = (row.get("TeamName") or "").strip()
+            try:
+                score = float(row.get("Score", 0))
+            except (ValueError, TypeError):
+                continue
+            if score >= min_elo:
+                lb[name] = score
+    print(f"loaded {len(lb)} teams with Elo >= {min_elo} from {csv_path}")
+    return lb
 
 
 def _card_id(card):
@@ -211,6 +227,19 @@ def player_decks(game):
     return out[0], out[1]
 
 
+def _team_name(game, pi):
+    """Return the team name for player pi, or None."""
+    info = game.get("info", {})
+    names = info.get("TeamNames")
+    if isinstance(names, list) and pi < len(names):
+        return names[pi]
+    agents = info.get("Agents", [])
+    if pi < len(agents):
+        a = agents[pi]
+        return (a.get("Name") if isinstance(a, dict) else a) or None
+    return None
+
+
 def iter_games(zip_path):
     with zipfile.ZipFile(zip_path) as z:
         for name in z.namelist():
@@ -222,13 +251,20 @@ def iter_games(zip_path):
                 continue
 
 
-def extract_dragapult_pairs(game):
-    """Yield (obs, action) for Dragapult players' in-game decisions."""
+def extract_dragapult_pairs(game, leaderboard=None):
+    """Yield (obs, action, team_name) for Dragapult players' in-game decisions.
+
+    If leaderboard is provided (dict name->Elo), skips players not meeting the threshold.
+    """
     d0, d1 = player_decks(game)
     steps = game["steps"]
     for pi, deck in enumerate((d0, d1)):
         if deck is None or DRAGAPULT_EX not in deck:
             continue
+        if leaderboard is not None:
+            tn = _team_name(game, pi)
+            if tn is None or tn not in leaderboard:
+                continue
         for t in range(1, len(steps) - 1):
             obs = steps[t][pi].get("observation")
             if not isinstance(obs, dict) or obs.get("select") is None:
@@ -242,25 +278,31 @@ def extract_dragapult_pairs(game):
             yield obs, nxt
 
 
-def build(zip_path, out_path, max_games=0):
+def build(zip_path, out_path, max_games=0, leaderboard_csv=None, min_elo=1000):
+    leaderboard = None
+    if leaderboard_csv:
+        leaderboard = load_leaderboard(leaderboard_csv, min_elo)
     records = []
-    n_games = n_draga = n_pairs = 0
+    n_games = n_draga = n_elo_draga = n_pairs = 0
     for game in iter_games(zip_path):
         if max_games and n_games >= max_games:
             break
         n_games += 1
-        for obs, act in extract_dragapult_pairs(game):
+        d0, d1 = player_decks(game)
+        has_draga = (d0 and DRAGAPULT_EX in d0) or (d1 and DRAGAPULT_EX in d1)
+        if has_draga:
+            n_draga += 1
+        for obs, act in extract_dragapult_pairs(game, leaderboard):
             rec = encode_decision(obs, act)
             if rec is not None:
                 records.append(rec)
                 n_pairs += 1
-        d0, d1 = player_decks(game)
-        if (d0 and DRAGAPULT_EX in d0) or (d1 and DRAGAPULT_EX in d1):
-            n_draga += 1
-    print(f"games={n_games} dragapult_games={n_draga} pairs={n_pairs}")
+                if has_draga:
+                    n_elo_draga += 1
+                    has_draga = False  # count once per game
+    print(f"games={n_games} dragapult_games={n_draga} elo_draga_games={n_elo_draga} pairs={n_pairs}")
     if not records:
         return
-    # serialize as a pickle of the list (variable-size option arrays)
     import pickle
     with open(out_path, "wb") as f:
         pickle.dump(records, f)
@@ -272,5 +314,7 @@ if __name__ == "__main__":
     ap.add_argument("zip")
     ap.add_argument("out", help="output .pkl path")
     ap.add_argument("--max-games", type=int, default=0)
+    ap.add_argument("--leaderboard", help="path to leaderboard CSV (with TeamName,Score columns)")
+    ap.add_argument("--min-elo", type=float, default=1000, help="minimum Elo to include (default 1000)")
     args = ap.parse_args()
-    build(args.zip, args.out, args.max_games)
+    build(args.zip, args.out, args.max_games, args.leaderboard, args.min_elo)
