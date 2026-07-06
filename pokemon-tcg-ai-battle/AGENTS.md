@@ -41,4 +41,5 @@
 
 ## 设计文档
 - `specs/000-ptcg-env-setup/plan.md` — 本环境的搭建设计（Approach B，已实施）。
-- `specs/001-dragapult-sample-agent/plan.md` — S1：从官方 Dragapult ex sample agent 起步。
+- `specs/001-dragapult-sample-agent/plan.md` — S1：从官方 Dragapult ex sample agent 起步（已执行，待出分）。
+- `specs/002-il-then-rl/plan.md` — IL→RL（CPU 方案）：模仿学习暖启动 + 自对弈强化学习。

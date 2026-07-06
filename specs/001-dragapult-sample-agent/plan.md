@@ -1,7 +1,7 @@
 # S1：从官方 Dragapult ex sample agent 起步
 
 - **日期**: 2026-07-06
-- **状态**: 待执行
+- **状态**: 已执行（S1.1–S1.6 完成，提交 PENDING，待梯子出分验证 ≥800）
 - **阶段**: S1（快速起跳，从 308 Elo 跃到 ~800–1000）
 - **前置**: 本地 cabt 环境已搭好（见 `specs/000-ptcg-env-setup/plan.md`，P0–P7 完成）
 - **方向**: 从官方 sample agent 起步（用户选定）
@@ -134,3 +134,20 @@ venv/bin/kaggle competitions submissions pokemon-tcg-ai-battle
 - **S2（调策略）**：拉每日 episode 数据集（`kaggle datasets download kaggle/pokemon-tcg-ai-battle-episodes-YYYY-MM-DD`），对 Elo≥1150 选手做 divergence mining（按 `SelectContext` 分桶找我们 vs top 的分歧），改逐牌打分；换 consensus meta 牌组。目标 1000–1100。届时另立 `specs/002/`。
 - **S3（冲顶）**：自选/克隆 top 牌组 + 完整 per-card policy（BasePolicy 抽象），或上 IS-MCTS（参考 `kiyotah/reinforcement-learning-and-mcts-sample-code`、SebAustin 仓库）。目标 1100+。
 - **策略报告**：基于 S1–S3 的真实战果 + meta 分析写 ≤2000 字报告（策略赛道 70% 方法 + 20% 牌组 + 10% 报告）。
+
+---
+
+## 7. 执行结果（2026-07-06）
+
+S1.1–S1.6 全部完成，提交已入队（`SubmissionStatus.PENDING`，UTC 00:00 / 北京 08:00 出分）。
+
+### 步骤记录
+- **S1.1**：`kaggle kernels pull kiyotah/a-sample-rule-based-agent-dragapult-ex-deck` → notebook（36KB，5 cells）。agent 在 cell 3（`%%writefile main.py`，855 行），cell 4 是打包逻辑。
+- **S1.2**：deck 不在 notebook 内，是 Kaggle 数据集 `kiyotah/dragapult-ex-deck`（228B，60 张：Dreepy×4/Drakloak×4/Dragapult ex×3 + Fezandipiti ex/Latias ex/Budew/Meowth ex + trainer + 火/超能量各4）。提取 cell 3（剥 `%%writefile`）→ `agents/dragapult/main.py`（854 行）+ 复制 deck.csv。
+- **S1.3**：加固两处：(1) deck 读取改 `_deck_path`（cwd+sys.path+Kaggle 三级回退，因 sample 在**模块顶层**读 deck，run_match 的 chdir-per-call 帮不上，必须 sys.path 回退）；(2) 末尾加 fallback wrapper（`_orig_agent` + `_legal_fallback` + try/except）。
+- **S1.4**：dragapult vs baseline（随机+sample deck）40 局 = **23W/17L = 57.5%**，0 异常/全 DONE（探针确认 38 决策 0 次 fallback）。低于 70% 目标但 cabt ±10pts 噪声 + baseline 非纯弱牌，可接受。本地 cabt 非梯子，真实分数看 S1.6。
+- **S1.5**：打包 504KB，干净目录 `import cg/main` + deck 60 张通过。
+- **S1.6**：提交 504KB，PENDING。random baseline 已出分 = 332.9（参考底分）。
+
+### 待验证
+- publicScore ≥ 800（S1 目标）。若未达：检视 submission 日志，若 agent 在梯子崩则排查（本地 0 崩溃，预期不崩）；若分数仅 ~400-500 说明 sample pilot 在梯子也偏弱，提前进入 S2 调优或换 consensus 牌组。
