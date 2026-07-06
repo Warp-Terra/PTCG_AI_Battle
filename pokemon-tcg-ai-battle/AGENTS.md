@@ -40,4 +40,5 @@
 `../pokemon-tcg-ai-battle-challenge-strategy/Card_ID List_{EN,JP}.pdf` 是卡牌视觉参考（很大，137MB/182MB，gitignored；本模型不能直接读 PDF）。
 
 ## 设计文档
-`specs/2026-07-06-ptcg-env-setup-design.md` — 本环境的搭建设计（Approach B）。
+- `specs/000-ptcg-env-setup/plan.md` — 本环境的搭建设计（Approach B，已实施）。
+- `specs/001-dragapult-sample-agent/plan.md` — S1：从官方 Dragapult ex sample agent 起步。
