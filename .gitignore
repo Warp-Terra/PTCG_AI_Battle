@@ -11,6 +11,10 @@ venv/
 data/
 *.tar.gz
 
+# Trained model weights (regenerable: tools/il_train.py -> tools/il_freeze.py)
+*.npz
+*.pt
+
 # Kaggle credentials
 .kaggle*/
 kaggle.json

@@ -21,6 +21,8 @@ fi
 TMP=$(mktemp -d); trap 'rm -rf "$TMP"' EXIT
 cp "$AGENT/main.py" "$TMP/main.py"
 cp "$AGENT/deck.csv" "$TMP/deck.csv"
+# include any model weight files (.npz) present in the agent dir
+for f in "$AGENT"/*.npz; do [ -f "$f" ] && cp "$f" "$TMP/$(basename "$f")"; done
 cp -r "$ROOT/cg-lib/cg" "$TMP/cg"
 
 ( cd "$TMP" && tar -czf "$AGENT/submission.tar.gz" . )

@@ -1,7 +1,7 @@
 # IL→RL（CPU 方案）：模仿学习暖启动 + 自对弈强化学习
 
 - **日期**: 2026-07-06
-- **状态**: 待执行
+- **状态**: Phase 1 已执行（执行结果见 `results.md`）
 - **路线**: IL（行为克隆）暖启动 → RL（自对弈）微调 → （可选）IS-MCTS 包装
 - **算力**: 纯 CPU（本机 6 核，无 GPU）——已验证可行
 - **前置**: 本地 cabt 环境已搭好（`specs/000-ptcg-env-setup/plan.md`）；S1 Dragapult sample agent 已提交（`specs/001-dragapult-sample-agent/plan.md`）
