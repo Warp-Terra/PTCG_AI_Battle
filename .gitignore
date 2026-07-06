@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.pyc
+venv/
+.venv/
+
+# Engine binaries (large + license-restricted) — provided by Kaggle, not redistributed
+**/cg/
+
+# Competition data & build artifacts
+data/
+*.tar.gz
+
+# Kaggle credentials
+.kaggle*/
+kaggle.json
+
+# Large card ID PDFs
+*.pdf
